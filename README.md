@@ -13,3 +13,6 @@ adding then into package.json the following mentions
 ### run application after
 npm run dev 
 Served on port 4000
+
+### A .env with HARPERDB_PW and  HARPERDB_URL  
+to find associated value for those variables, check in the config of the instance in HarperDB)
