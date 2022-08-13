@@ -21,6 +21,11 @@ const io = new Server(server, {
 const CHATBOT = 'chatBot';
 let chatRoom = '';
 let allMembers =[];
+const leaveRoom = require('./utils/leave_room');
+
+// set Harper connection anf import associated services (functions to store/retrieve messages into/from the harperDB)
+const harperSaveMessage = require('./services/harper-save-message');
+const harperGetLast100Messages = require('./services/harper-get-last100-messages');
 
 
 /**
@@ -38,7 +43,7 @@ io.on('connection', (socket) => {
 
     
 
-    //Adding to a room 
+    //Adding to a room. Listening to FRONTEND call (REPOSITORY realtime_chat_app_with_rooms/client/src/pages/home/index.js   =>   joinRoom()) 
     socket.on('join_room', (data) => {
         // Data sent from FRONTEND when join_room event emitted
         const { username, room } = data;
@@ -70,7 +75,52 @@ io.on('connection', (socket) => {
         socket.to(room).emit('chatroom_users', chatRoomUsers);
         socket.emit('chatroom_users', chatRoomUsers);
 
+
+        // Get last 100 messages sent in the chat room
+        harperGetLast100Messages(room)
+          .then((last100Messages) => {socket.emit('last_100_messages', last100Messages)})
+          .catch((err) => console.log(err));
+
+
+    });
+
+    // Managing the 'sending message' actions. Listening to FRONTEND call (REPOSITORY realtime_chat_app_with_rooms/client/src/pages/chat/send_message.js) 
+    socket.on('send_message', (data) => {
+      const { message, username, room, __createdtime__ } = data;
+      io.in(room).emit('receive_message', data); // Send to all users in room, including sender
+      harperSaveMessage(message, username, room, __createdtime__) // Save message in db
+        .then((response) => console.log(response))
+        .catch((err) => console.log(err));
+    });
+
+    //managing FRONT request of leaving a room
+    socket.on('leave_room', (data) => {
+      const { username, room } = data;
+      socket.leave(room);
+      const __createdtime__ = Date.now();
+      // Remove user from memory
+      allMembers = leaveRoom(socket.id, allMembers);
+      socket.to(room).emit('chatroom_users', allMembers);
+      socket.to(room).emit('receive_message', {
+        username: CHATBOT,
+        message: `${username} has left the chat`,
+        __createdtime__,
       });
+      console.log(`${username} has left the chat`);
+    });
+
+    //managing FRONT request of disconnecting completely from the socket
+    socket.on('disconnect', () => {
+      console.log('User disconnected from the chat');
+      const user = allMembers.find((user) => user.id == socket.id);
+      if (user?.username) {
+        allMembers = leaveRoom(socket.id, allMembers);
+        socket.to(chatRoom).emit('chatroom_users', allMembers);
+        socket.to(chatRoom).emit('receive_message', {
+          message: `${user.username} has disconnected from the chat.`,
+        });
+      }
+    });
 
 });
 
