@@ -9,7 +9,7 @@ const cors = require('cors');
 app.use(cors()); 
 
 
-// set SocketIO connection, integrating cors management, and setting variables that will help us managing events/communications/rooms..
+// set SocketIO connection, integrating cors management, and setting variables that will help managing events/communications/rooms..
 const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -23,7 +23,7 @@ let chatRoom = '';
 let allMembers =[];
 const leaveRoom = require('./utils/leave_room');
 
-// set Harper connection anf import associated services (functions to store/retrieve messages into/from the harperDB)
+// set Harper connection and import associated services (functions to store/retrieve messages into/from the harperDB)
 const harperSaveMessage = require('./services/harper-save-message');
 const harperGetLast100Messages = require('./services/harper-get-last100-messages');
 
@@ -68,9 +68,9 @@ io.on('connection', (socket) => {
         });
 
         chatRoom = room;
-        // add the new connected user to the list of all connected members
+        // Add the new connected user to the list of all connected members
         allMembers.push({ id: socket.id, username, room }); 
-        // filter users belonging to the room where the new connected user is trying to join
+        // Filter users belonging to the room where the new connected user is trying to join
         chatRoomUsers = allMembers.filter((member) => member.room === room); 
         socket.to(room).emit('chatroom_users', chatRoomUsers);
         socket.emit('chatroom_users', chatRoomUsers);
@@ -84,7 +84,7 @@ io.on('connection', (socket) => {
 
     });
 
-    // Managing the 'sending message' actions. Listening to FRONTEND call (REPOSITORY realtime_chat_app_with_rooms/client/src/pages/chat/send_message.js) 
+    // Managing the 'sending message' actions, listening to FRONTEND call (REPOSITORY realtime_chat_app_with_rooms/client/src/pages/chat/send_message.js) 
     socket.on('send_message', (data) => {
       const { message, username, room, __createdtime__ } = data;
       io.in(room).emit('receive_message', data); // Send to all users in room, including sender
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
         .catch((err) => console.log(err));
     });
 
-    //managing FRONT request of leaving a room
+    // Managing FRONT request of leaving a room
     socket.on('leave_room', (data) => {
       const { username, room } = data;
       socket.leave(room);
